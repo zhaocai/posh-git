@@ -1,6 +1,8 @@
 # Inspired by Mark Embling
 # http://www.markembling.info/view/my-ideal-powershell-prompt-with-git-integration
 
+Add-Type -Path .\libgit2sharp\LibGit2Sharp.dll
+
 function Get-GitDirectory {
     if ($Env:GIT_DIR) {
         $Env:GIT_DIR
@@ -101,48 +103,19 @@ function Get-GitStatus($gitDir = (Get-GitDirectory)) {
 
         if($settings.EnableFileStatus -and !$(InDisabledRepository)) {
             dbg 'Getting status' $sw
-            $status = git -c color.status=false status --short --branch 2>$null
-        } else {
-            $status = @()
+            $Global:GitRepo = $repo = New-Object LibGit2Sharp.Repository $gitDir
+            $status = $repo.Index.RetrieveStatus()
+            $filesAdded = $status.Untracked
+            $filesModified = $status.Modified
+            $filesDeleted = $status.Missing
+            $indexAdded = $status.Added
+            $indexModified = $status.Staged
+            $indexDeleted = $status.Removed
+            $aheadBy = $repo.Head.AheadBy
+            $behindBy = $repo.Head.BehindBy
         }
 
-        dbg 'Parsing status' $sw
-        $status | foreach {
-            dbg "Status: $_" $sw
-            if($_) {
-                switch -regex ($_) {
-                    '^(?<index>[^#])(?<working>.) (?<path1>.*?)(?: -> (?<path2>.*))?$' {
-                        switch ($matches['index']) {
-                            'A' { $indexAdded += $matches['path1'] }
-                            'M' { $indexModified += $matches['path1'] }
-                            'R' { $indexModified += $matches['path1'] }
-                            'C' { $indexModified += $matches['path1'] }
-                            'D' { $indexDeleted += $matches['path1'] }
-                            'U' { $indexUnmerged += $matches['path1'] }
-                        }
-                        switch ($matches['working']) {
-                            '?' { $filesAdded += $matches['path1'] }
-                            'A' { $filesAdded += $matches['path1'] }
-                            'M' { $filesModified += $matches['path1'] }
-                            'D' { $filesDeleted += $matches['path1'] }
-                            'U' { $filesUnmerged += $matches['path1'] }
-                        }
-                    }
-
-                    '^## (?<branch>\S+)(?:\.\.\.(?<upstream>\S+) \[(?:ahead (?<ahead>\d+))?(?:, )?(?:behind (?<behind>\d+))?\])?$' {
-                        $branch = $matches['branch']
-                        $upstream = $matches['upstream']
-                        $aheadBy = [int]$matches['ahead']
-                        $behindBy = [int]$matches['behind']
-                    }
-
-                    '^## Initial commit on (?<branch>\S+)$' {
-                        $branch = $matches['branch']
-                    }
-                }
-            }
-        }
-
+        dbg 'Get-GitBranch' $sw
         if(!$branch) { $branch = Get-GitBranch $gitDir $sw }
         dbg 'Building status object' $sw
         $indexPaths = $indexAdded + $indexModified + $indexDeleted + $indexUnmerged
