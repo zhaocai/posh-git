@@ -46,6 +46,8 @@ $global:GitPromptSettings = New-Object PSObject -Property @{
     EnableFileStatus          = $true
     RepositoriesInWhichToDisableFileStatus = @( ) # Array of repository paths
 
+    MaxPromptPathLength       = 40
+
     Debug                     = $false
 }
 

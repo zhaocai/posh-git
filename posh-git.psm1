@@ -14,6 +14,7 @@ if (!$Env:HOME) { $Env:HOME = "$Env:HOMEDRIVE$Env:HOMEPATH" }
 if (!$Env:HOME) { $Env:HOME = "$Env:USERPROFILE" }
 
 Export-ModuleMember -Function @(
+        'Limit-Path',
         'Write-GitStatus',
         'Get-GitStatus', 
         'Enable-GitColors', 
